@@ -45,3 +45,6 @@ JIRA_REPORT_IN_DEBUG = If set to True, then JIRA will report even if in DEBUG
 
 JIRA_WONT_FIX = The ID of the "Won't Fix" resolution, Django-JIRA won't reopen
                 tickets with this resolution
+
+JIRA_COMMENT_REOPEN_ONLY = If set to True, then JIRA will only add a comment if
+                           the issue was reopened, otherwise, nothing occurs.

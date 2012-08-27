@@ -78,11 +78,15 @@ class JiraExceptionReporterMiddleware:
                 # If this issue is closed, reopen it
                 if issue.status in settings.JIRA_REOPEN_CLOSED and issue.resolution != settings.JIRA_WONT_FIX:
                     self._soap.service.progressWorkflowAction(self._auth, issue.key, settings.JIRA_REOPEN_ACTION, ())
+                    reopened = True
+                else:
+                    reopened = False
                 
                 # Add a comment
-                self._soap.service.addComment(self._auth, issue.key, {
-                    'body': issue_message
-                })
+                if reopened or not getattr(settings, 'JIRA_COMMENT_REOPEN_ONLY', False):
+                    self._soap.service.addComment(self._auth, issue.key, {
+                        'body': issue_message
+                    })
                 
                 found = True
                 break
