@@ -28,8 +28,8 @@ JIRA_PASSWORD = The password of the user to log in to JIRA as
 JIRA_ISSUE_DEFAULTS = A dictionary of the settings to use when creating a JIRA
                       issue, e.g.,
     {
-        'project': 'PROJ', # The project code inside JIRA
-        'type':    1       # The ID of the issue type to be created. 1 = Bug
+        'project': {"key": 'PROJ'},     # The project code inside JIRA
+        'type':    {"issuetype": "Bug"} # The Name of the issue type to be created. 1 = Bug
     }
 
 JIRA_REOPEN_CLOSED = If an exception is raised and an issue is closed is in any
@@ -48,3 +48,6 @@ JIRA_WONT_FIX = The ID of the "Won't Fix" resolution, Django-JIRA won't reopen
 
 JIRA_COMMENT_REOPEN_ONLY = If set to True, then JIRA will only add a comment if
                            the issue was reopened, otherwise, nothing occurs.
+
+JIRA_AUTH_TYPE = Either basic or oauth.  This currently isn't implemented and
+                 the software only supports BASIC authentication.

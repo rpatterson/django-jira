@@ -7,8 +7,8 @@ from django.conf import settings
 from django.http import Http404
 from django.core.exceptions import MiddlewareNotUsed
 
-from suds import WebFault
-import suds.client
+from jira.client import JIRA
+from jira.exceptions import JIRAError
 
 class JiraExceptionReporterMiddleware:
     
@@ -28,12 +28,16 @@ class JiraExceptionReporterMiddleware:
             settings.JIRA_ISSUE_DEFAULTS
             settings.JIRA_REOPEN_CLOSED
             settings.JIRA_WONT_FIX
+
+            auth = getattr(settings, "JIRA_AUTH_TYPE", "basic").lower()
+            if auth not in ("basic","oauth"):
+                auth = "basic"
             
-            # Set up SOAP
-            self._soap = suds.client.Client(settings.JIRA_URL + 'rpc/soap/jirasoapservice-v2?wsdl')        
-            
-            # Authenticate
-            self._auth = self._soap.service.login(settings.JIRA_USER, settings.JIRA_PASSWORD)
+            # Set up JIRA Client
+            if auth == "basic":
+                self._jira = JIRA(basic_auth=(settings.JIRA_USER,
+                    settings.JIRA_PASSWORD), options={"server":
+                    settings.JIRA_URL})
         
         except AttributeError:
             raise MiddlewareNotUsed
@@ -56,37 +60,38 @@ class JiraExceptionReporterMiddleware:
         
         # See if this exception has already been reported inside JIRA
         try:
-            existing = self._soap.service.getIssuesFromJqlSearch(self._auth,
-                                                                 'project = "' + settings.JIRA_ISSUE_DEFAULTS['project'] + '" AND summary ~ "' + issue_title + '"',
-                                                                 1)
-        except WebFault as e:
+            existing = self._jira.search_issues('project = "' +
+                    settings.JIRA_ISSUE_DEFAULTS['project']["key"] + '" AND summary ~ "' + issue_title + '"', maxResults=1)
+        except JIRAError as e:
+            raise
             # If we've been logged out of JIRA, log back in
-            if e.fault.faultstring == 'com.atlassian.jira.rpc.exception.RemoteAuthenticationException: User not authenticated yet, or session timed out.':
+            """if e.fault.faultstring == 'com.atlassian.jira.rpc.exception.RemoteAuthenticationException: User not authenticated yet, or session timed out.':
                 self._auth = self._soap.service.login(settings.JIRA_USER, settings.JIRA_PASSWORD)
                 existing = self._soap.service.getIssuesFromJqlSearch(self._auth,
                                                                      'project = "' + settings.JIRA_ISSUE_DEFAULTS['project'] + '" AND summary ~ "' + issue_title + '"',
                                                                      1)
-            
             else:
                 raise
+            """ 
         
         # If it has, add a comment noting that we've had another report of it
         found = False
         for issue in existing:
-            if issue_title == issue.summary:
+            if issue_title == issue.fields.summary:
             
                 # If this issue is closed, reopen it
-                if issue.status in settings.JIRA_REOPEN_CLOSED and issue.resolution != settings.JIRA_WONT_FIX:
-                    self._soap.service.progressWorkflowAction(self._auth, issue.key, settings.JIRA_REOPEN_ACTION, ())
+                if int(issue.fields.status.id) in settings.JIRA_REOPEN_CLOSED \
+                        and (issue.fields.resolution and int(issue.fields.resolution.id) != settings.JIRA_WONT_FIX):
+                    self._jira.transition_issue(issue,
+                            str(settings.JIRA_REOPEN_ACTION))
+
                     reopened = True
                 else:
                     reopened = False
                 
                 # Add a comment
                 if reopened or not getattr(settings, 'JIRA_COMMENT_REOPEN_ONLY', False):
-                    self._soap.service.addComment(self._auth, issue.key, {
-                        'body': issue_message
-                    })
+                    self._jira.add_comment(issue, issue_message)
                 
                 found = True
                 break
@@ -97,5 +102,4 @@ class JiraExceptionReporterMiddleware:
             issue['summary'] = issue_title
             issue['description'] = issue_message
         
-            self._soap.service.createIssue(self._auth, issue)
-        
+            self._jira.create_issue(fields=issue)
