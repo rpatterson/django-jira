@@ -43,7 +43,7 @@ class JiraExceptionReporterMiddleware:
             raise MiddlewareNotUsed
     
     def process_exception(self, request, exc):
-        
+
         # Don't log 404 errors
         if isinstance(exc, Http404):
             return
@@ -64,15 +64,6 @@ class JiraExceptionReporterMiddleware:
                     settings.JIRA_ISSUE_DEFAULTS['project']["key"] + '" AND summary ~ "' + issue_title + '"', maxResults=1)
         except JIRAError as e:
             raise
-            # If we've been logged out of JIRA, log back in
-            """if e.fault.faultstring == 'com.atlassian.jira.rpc.exception.RemoteAuthenticationException: User not authenticated yet, or session timed out.':
-                self._auth = self._soap.service.login(settings.JIRA_USER, settings.JIRA_PASSWORD)
-                existing = self._soap.service.getIssuesFromJqlSearch(self._auth,
-                                                                     'project = "' + settings.JIRA_ISSUE_DEFAULTS['project'] + '" AND summary ~ "' + issue_title + '"',
-                                                                     1)
-            else:
-                raise
-            """ 
         
         # If it has, add a comment noting that we've had another report of it
         found = False

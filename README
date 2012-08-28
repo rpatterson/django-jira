@@ -29,7 +29,7 @@ JIRA_ISSUE_DEFAULTS = A dictionary of the settings to use when creating a JIRA
                       issue, e.g.,
     {
         'project': {"key": 'PROJ'},     # The project code inside JIRA
-        'type':    {"issuetype": "Bug"} # The Name of the issue type to be created. 1 = Bug
+        'type':    {"issuetype": "Bug"} # The Name of the issue type to be created.
     }
 
 JIRA_REOPEN_CLOSED = If an exception is raised and an issue is closed is in any
