@@ -1,7 +1,7 @@
 from distutils.core import setup
 
 setup(name='django-jira',
-      version='1.51',
+      version='1.52',
       description='An automated exception reporter to JIRA from Django',
       author='Chris Northwood',
       author_email='christopher.northwood@oucs.ox.ac.uk',
