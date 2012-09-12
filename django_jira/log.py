@@ -1,8 +1,8 @@
 import logging
+import re
 import sys
 import traceback
 
-import json
 
 from django.utils.log import AdminEmailHandler
 from django.views.debug import ExceptionReporter, get_exception_reporter_filter
@@ -103,17 +103,21 @@ class JiraHandler(logging.Handler):
         try:
             request = record.request
             subject = record.getMessage()
+            issue_title = record.getMessage()
             filter = get_exception_reporter_filter(request)
             request_repr = filter.get_request_repr(request)
         except Exception:
             subject = record.getMessage()
+            issue_title = record.getMessage()
             request = None
             request_repr = "Request repr() unavailable."
-        subject = self.format_subject(subject)
-
 
         if record.exc_info:
             exc_info = record.exc_info
+            exc_tb = traceback.extract_tb(exc_info[2])
+            exc_type = type(exc_info[1]).__name__
+            issue_title = re.sub(r'"', r'\\\"', exc_type 
+                    + ' thrown by ' + exc_tb[-1][2])
             stack_trace = '\n'.join(traceback.format_exception(*record.exc_info))
         else:
             exc_info = (None, record.getMessage(), None)
@@ -126,12 +130,12 @@ class JiraHandler(logging.Handler):
         try:
             existing = self._jira.search_issues('project = "' +
                     self.issue_defaults['project']["key"] + 
-                    '" AND summary ~ "' + subject + '"', maxResults=1)
+                    '" AND summary ~ "' + issue_title + '"', maxResults=1)
 
             # If it has, add a comment noting that we've had another report of it
             found = False
             for issue in existing:
-                if subject == issue.fields.summary:
+                if issue_title == issue.fields.summary:
 
                     # If this issue is closed, reopen it
                     if int(issue.fields.status.id) in self.reopen_closed \
@@ -153,19 +157,9 @@ class JiraHandler(logging.Handler):
             if not found:
                 # Otherwise, create it
                 issue = self.issue_defaults.copy()
-                issue['summary'] = subject
+                issue['summary'] = issue_title
                 issue['description'] = issue_msg
 
                 self._jira.create_issue(fields=issue)
         except Exception:
             return self.fire_email(record, sys.exc_info())
-
-
-    def format_subject(self, subject):
-        """
-        Escape CR and LF characters, and limit length.
-        RFC 2822's hard limit is 998 characters per line. So, minus "Subject: "
-        the actual subject must be no longer than 989 characters.
-        """
-        formatted_subject = subject.replace('\n', '\\n').replace('\r', '\\r')
-        return formatted_subject[:989]
