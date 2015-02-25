@@ -43,13 +43,29 @@ class JiraExceptionReporterMiddleware:
         # Don't log 404 errors
         if isinstance(exc, Http404):
             return
-        
-        # This parses the traceback - so we can get the name of the function
-        # which generated this exception
+
         exc_tb = traceback.extract_tb(sys.exc_info()[2])
-        
+        try:
+            # Find the view for this request
+            # From django.core.handlers.base:BaseHandler.get_response
+            from django.core import urlresolvers
+            from django.conf import settings
+
+            urlconf = settings.ROOT_URLCONF
+            urlresolvers.set_urlconf(urlconf)
+            resolver = urlresolvers.RegexURLResolver(r'^/', urlconf)
+            callback, callback_args, callback_kwargs = resolver.resolve(
+                request.path_info)
+            caller = '{0}:{1}'.format(callback.__module__, callback.__name__)
+
+        except Exception:
+            # This parses the traceback - so we can get the name of the function
+            # which generated this exception
+            caller = exc_tb[-1][2]
+
         # Build our issue title in the form "ExceptionType thrown by function name"
-        issue_title = re.sub(r'"', r'\\\"', type(exc).__name__ + ' thrown by ' + exc_tb[-1][2])
+        issue_title = re.sub(
+            r'"', r'\\\"', type(exc).__name__ + ' thrown by ' + caller)
         issue_message = repr(exc.message) + '\n\n' + \
                         '{noformat:title=Traceback}\n' + traceback.format_exc() + '\n{noformat}\n\n' + \
                         '{noformat:title=Request}\n' + repr(request) + '\n{noformat}'
