@@ -1,10 +1,11 @@
 from distutils.core import setup
 
 setup(name='django-jira',
-      version='1.1',
+      version='2.1.4',
       description='An automated exception reporter to JIRA from Django',
-      author='Chris Northwood',
-      author_email='christopher.northwood@oucs.ox.ac.uk',
-      url='https://github.com/cnorthwood/django-jira',
+      author='Stephen Golub',
+      author_email='nickburns2006@tamu.edu',
+      url='https://github.com/nickburns2006/django-jira',
       packages=['django_jira'],
+      install_requires=['jira-python', 'django>=1.4'],
      )
