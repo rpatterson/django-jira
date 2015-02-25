@@ -1,7 +1,33 @@
 Changelog
 =========
 
-1.0    (ureleased)
+2.1.4  (2012-09-11)
+-------------------
+
+- Modified the subject being sent to the JIRA Server.
+  [Stephen Golub <nickburns2006@tamu.edu>]
+
+2.1.2    (2012-09-10)
+---------------------
+
+- Rewrite to use the Django/Python logging framework.
+  [Stephen Golub <nickburns2006@tamu.edu>]
+
+1.52   (2012-09-10)
+-------------------
+
+- Fall back to sending an email if the Jira request fails.
+  [Stephen Golub <nickburns2006@tamu.edu>]
+
+1.51    (2012-08-27)
+--------------------
+
+- Converted all of the calls to Jira to use the jira-python module so that the
+  newer REST API is being used.
+  [Stephen Golub <nickburns2006@tamu.edu>]
+
+1.0    (2011-02-23)
 -------------------
 
 - Initial release
+  [Chris Northwood <christopher.northwood@oucs.ox.ac.uk>]
