@@ -1,5 +1,4 @@
 import traceback
-import hashlib
 import sys
 import re
 
@@ -10,7 +9,6 @@ from django.core.exceptions import MiddlewareNotUsed
 from jira.client import JIRA
 from jira.exceptions import JIRAError
 
-import json
 
 class JiraExceptionReporterMiddleware:
     
@@ -82,7 +80,7 @@ class JiraExceptionReporterMiddleware:
             try:
                 existing = self._jira.search_issues('project = "' +
                         settings.JIRA_ISSUE_DEFAULTS['project']["key"] + '" AND summary ~ "' + issue_title + '"', maxResults=1)
-            except JIRAError as e:
+            except JIRAError:
                 raise
             
             # If it has, add a comment noting that we've had another report of it

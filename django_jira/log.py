@@ -5,10 +5,10 @@ import traceback
 
 
 from django.utils.log import AdminEmailHandler
-from django.views.debug import ExceptionReporter, get_exception_reporter_filter
+from django.views.debug import get_exception_reporter_filter
 
 from jira.client import JIRA
-from jira.exceptions import JIRAError
+
 
 class JiraRecord(object):
     def __init__(self, record, exc_info):
@@ -123,7 +123,6 @@ class JiraHandler(logging.Handler):
             exc_info = (None, record.getMessage(), None)
             stack_trace = 'No stack trace available'
 
-        message = "%s\n\n%s" % (stack_trace, request_repr)
         issue_msg = "%s\n\n{code:title=Traceback}\n%s\n{code}\n\n{code:title=Request}\n%s\n{code}" % (subject, stack_trace, request_repr)
 
         # See if this exception has already been reported inside JIRA
