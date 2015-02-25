@@ -72,9 +72,7 @@ class JiraHandler(logging.Handler):
 
     @property
     def _jira(self):
-        if hasattr(self, "_jr") and isinstance(self._jr, JIRA):
-            return self._jr
-        else:
+        if not isinstance(getattr(self, '_jr', None), JIRA):
             if (
                     hasattr(self, "jira_url") and hasattr(self, "jira_user")
                     and hasattr(self, "jira_pwd")):
@@ -82,12 +80,10 @@ class JiraHandler(logging.Handler):
 
                 if auth_type is None:
                     self._jr = JIRA(options={"server": self.jira_url})
-                    return self._jr
                 elif auth_type == "basic":
                     self._jr = JIRA(
                         basic_auth=(self.jira_user, self.jira_pwd),
                         options={"server": self.jira_url})
-                    return self._jr
                 elif auth_type == "oauth":
                     raise NotImplementedError(
                         "OAuth for the Jira Reporter hasn't been implemented yet.")
@@ -95,6 +91,7 @@ class JiraHandler(logging.Handler):
                     raise Exception("You have entered an invalid AuthType")
             else:
                 raise Exception("There is a problem with the configuration of the django-jira app.")
+        return self._jr
 
     def fire_email(self, record, exc_info=None):
         mail_handler = AdminEmailHandler(include_html=self.include_html)
