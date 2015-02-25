@@ -122,8 +122,27 @@ class JiraHandler(logging.Handler):
             exc_info = record.exc_info
             exc_tb = traceback.extract_tb(exc_info[2])
             exc_type = type(exc_info[1]).__name__
+
+            try:
+                # Find the view for this request
+                # From django.core.handlers.base:BaseHandler.get_response
+                from django.core import urlresolvers
+                from django.conf import settings
+
+                urlconf = settings.ROOT_URLCONF
+                urlresolvers.set_urlconf(urlconf)
+                resolver = urlresolvers.RegexURLResolver(r'^/', urlconf)
+                callback, callback_args, callback_kwargs = resolver.resolve(
+                    request.path_info)
+                caller = '{0}:{1}'.format(callback.__module__, callback.__name__)
+
+            except Exception:
+                # This parses the traceback - so we can get the name of the function
+                # which generated this exception
+                caller = exc_tb[-1][2]
+
             issue_title = re.sub(
-                r'"', r'\\\"', exc_type + ' thrown by ' + exc_tb[-1][2])
+                r'"', r'\\\"', exc_type + ' thrown by ' + caller)
             stack_trace = '\n'.join(traceback.format_exception(*record.exc_info))
         else:
             exc_info = (None, record.getMessage(), None)
