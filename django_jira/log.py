@@ -11,6 +11,7 @@ from jira.client import JIRA
 
 
 class JiraRecord(object):
+
     def __init__(self, record, exc_info):
         self.request = record.request
         self.exc_info = exc_info
@@ -19,7 +20,9 @@ class JiraRecord(object):
     def getMessage(self):
         return "Problem Working with Jira Server"
 
+
 class JiraHandler(logging.Handler):
+
     """An exception log handler that sends the log entries to the specified
     Jira server and project.
 
@@ -28,9 +31,10 @@ class JiraHandler(logging.Handler):
 
     """
 
-    def __init__(self, include_html=False, server_url="http://localhost:2990/jira/",
+    def __init__(
+            self, include_html=False, server_url="http://localhost:2990/jira/",
             user=False, password=False, auth_type=None, issue_defaults=False,
-            reopen_closed=(4,6), reopen_action=3, wont_fix=False,
+            reopen_closed=(4, 6), reopen_action=3, wont_fix=False,
             comment_reopen_only=False, mail_logger="mail_admins"):
         logging.Handler.__init__(self)
         self.include_html = include_html
@@ -51,14 +55,14 @@ class JiraHandler(logging.Handler):
             if 'project' not in self.issue_defaults:
                 self.issue_defaults['project'] = {'key': 'JIRA'}
             elif not isinstance(self.issue_defaults['project'], dict):
-                self.issue_defaults['project'] = {'key':
-                        self.issue_defaults['project']}
+                self.issue_defaults['project'] = {
+                    'key': self.issue_defaults['project']}
 
             if 'issuetype' not in self.issue_defaults:
                 self.issue_defaults['issuetype'] = {'id': '1'}
             elif not isinstance(self.issue_defaults['issuetype'], dict):
-                self.issue_defaults['issuetype'] = {'id':
-                        self.issue_defaults['issuetype']}
+                self.issue_defaults['issuetype'] = {
+                    'id': self.issue_defaults['issuetype']}
 
             self.reopen_closed = reopen_closed
             self.reopen_action = reopen_action
@@ -71,16 +75,18 @@ class JiraHandler(logging.Handler):
         if hasattr(self, "_jr") and isinstance(self._jr, JIRA):
             return self._jr
         else:
-            if hasattr(self, "jira_url") and hasattr(self,"jira_user") and \
-                    hasattr(self, "jira_pwd"):
+            if (
+                    hasattr(self, "jira_url") and hasattr(self, "jira_user")
+                    and hasattr(self, "jira_pwd")):
                 auth_type = getattr(self, "auth_type", "basic").lower()
 
-                if auth_type == None:
+                if auth_type is None:
                     self._jr = JIRA(options={"server": self.jira_url})
                     return self._jr
                 elif auth_type == "basic":
-                    self._jr = JIRA(basic_auth=(self.jira_user, self.jira_pwd),
-                            options={"server": self.jira_url})
+                    self._jr = JIRA(
+                        basic_auth=(self.jira_user, self.jira_pwd),
+                        options={"server": self.jira_url})
                     return self._jr
                 elif auth_type == "oauth":
                     raise Exception("OAuth for the Jira Reporter hasn't been implemented yet.")
@@ -93,7 +99,6 @@ class JiraHandler(logging.Handler):
         mail_handler = AdminEmailHandler(include_html=self.include_html)
         mail_handler.emit(record)
         mail_handler.emit(JiraRecord(record, exc_info))
-
 
     def emit(self, record):
         if self.unused:
@@ -116,20 +121,21 @@ class JiraHandler(logging.Handler):
             exc_info = record.exc_info
             exc_tb = traceback.extract_tb(exc_info[2])
             exc_type = type(exc_info[1]).__name__
-            issue_title = re.sub(r'"', r'\\\"', exc_type 
-                    + ' thrown by ' + exc_tb[-1][2])
+            issue_title = re.sub(
+                r'"', r'\\\"', exc_type + ' thrown by ' + exc_tb[-1][2])
             stack_trace = '\n'.join(traceback.format_exception(*record.exc_info))
         else:
             exc_info = (None, record.getMessage(), None)
             stack_trace = 'No stack trace available'
 
-        issue_msg = "%s\n\n{code:title=Traceback}\n%s\n{code}\n\n{code:title=Request}\n%s\n{code}" % (subject, stack_trace, request_repr)
+        issue_msg = "%s\n\n{code:title=Traceback}\n%s\n{code}\n\n{code:title=Request}\n%s\n{code}" % (
+            subject, stack_trace, request_repr)
 
         # See if this exception has already been reported inside JIRA
         try:
-            existing = self._jira.search_issues('project = "' +
-                    self.issue_defaults['project']["key"] + 
-                    '" AND summary ~ "' + issue_title + '"', maxResults=1)
+            existing = self._jira.search_issues(
+                'project = "' + self.issue_defaults['project']["key"] +
+                '" AND summary ~ "' + issue_title + '"', maxResults=1)
 
             # If it has, add a comment noting that we've had another report of it
             found = False
@@ -139,8 +145,8 @@ class JiraHandler(logging.Handler):
                     # If this issue is closed, reopen it
                     if int(issue.fields.status.id) in self.reopen_closed \
                             and (issue.fields.resolution and int(issue.fields.resolution.id) != self.wont_fix):
-                        self._jira.transition_issue(issue,
-                                str(self.reopen_action))
+                        self._jira.transition_issue(
+                            issue, str(self.reopen_action))
 
                         reopened = True
                     else:

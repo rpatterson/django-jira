@@ -8,4 +8,4 @@ setup(name='django-jira',
       url='https://github.com/nickburns2006/django-jira',
       packages=['django_jira'],
       install_requires=['jira-python', 'django>=1.4'],
-     )
+      )
