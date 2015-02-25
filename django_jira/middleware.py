@@ -1,5 +1,6 @@
 import sys
 import logging
+import warnings
 
 from django.conf import settings
 from django.http import Http404
@@ -23,6 +24,12 @@ class JiraMiddlewareHandler(log.JiraHandler):
 class JiraExceptionReporterMiddleware:
 
     def __init__(self):
+        warnings.warn(
+            '{0} is deprecated, use {1}.{2} in the logging config instead'
+            .format(
+                self.__class__,
+                log.JiraHandler.__module__, log.JiraHandler.__name__),
+            DeprecationWarning)
 
         # If we're in debug mode, and JIRA_REPORT_IN_DEBUG is false (or not set)
         # then don't report errors
