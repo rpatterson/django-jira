@@ -1,13 +1,23 @@
-import traceback
 import sys
-import re
+import logging
 
 from django.conf import settings
 from django.http import Http404
 from django.core.exceptions import MiddlewareNotUsed
 
-from jira.client import JIRA
-from jira.exceptions import JIRAError
+from django_jira import log
+
+
+class JiraMiddlewareHandler(log.JiraHandler):
+    """
+    Leave firing emails as a fallback to Django itself.
+    """
+
+    def emit(self, record):
+        """
+        Leave firing emails as a fallback to Django itself.
+        """
+        self._emit(record)
 
 
 class JiraExceptionReporterMiddleware:
@@ -25,19 +35,31 @@ class JiraExceptionReporterMiddleware:
 
         # Silently fail if any settings are missing
         try:
-            settings.JIRA_ISSUE_DEFAULTS
-            settings.JIRA_REOPEN_CLOSED
-            settings.JIRA_WONT_FIX
+            self.handler = JiraMiddlewareHandler(
+                server_url=settings.JIRA_URL,
+                user=settings.JIRA_USER, password=settings.JIRA_PASSWORD,
+                auth_type=getattr(settings, "JIRA_AUTH_TYPE", "basic").lower(),
+                issue_defaults=settings.JIRA_ISSUE_DEFAULTS,
+                reopen_closed=settings.JIRA_REOPEN_CLOSED,
+                reopen_action=settings.JIRA_REOPEN_ACTION,
+                wont_fix=settings.JIRA_WONT_FIX,
+                comment_reopen_only=getattr(
+                    settings, 'JIRA_COMMENT_REOPEN_ONLY', False))
 
-            auth = getattr(settings, "JIRA_AUTH_TYPE", "basic").lower()
-            if auth not in ("basic", "oauth"):
-                auth = "basic"
+            if self.handler.unused:
+                raise MiddlewareNotUsed
 
             # Set up JIRA Client
-            if auth == "basic":
-                self._jira = JIRA(
-                    basic_auth=(settings.JIRA_USER, settings.JIRA_PASSWORD),
-                    options={"server": settings.JIRA_URL})
+            self.handler._jira
+
+            self.logger = (
+                # Mimic the Django exception logger
+                # From logging.Manager.getLogger
+                logging.Logger.manager.loggerClass or logging._loggerClass
+            )(
+                # From django.core.handlers.base:logger
+                'django.request')
+            self.logger.addHandler(self.handler)
 
         except AttributeError:
             raise MiddlewareNotUsed
@@ -48,73 +70,14 @@ class JiraExceptionReporterMiddleware:
             if isinstance(exc, Http404):
                 return
 
-            exc_tb = traceback.extract_tb(sys.exc_info()[2])
-            try:
-                # Find the view for this request
-                # From django.core.handlers.base:BaseHandler.get_response
-                from django.core import urlresolvers
-                from django.conf import settings
-
-                urlconf = settings.ROOT_URLCONF
-                urlresolvers.set_urlconf(urlconf)
-                resolver = urlresolvers.RegexURLResolver(r'^/', urlconf)
-                callback, callback_args, callback_kwargs = resolver.resolve(
-                    request.path_info)
-                caller = '{0}:{1}'.format(
-                    callback.__module__, callback.__name__)
-
-            except Exception:
-                # This parses the traceback - so we can get the name of the
-                # function which generated this exception
-                caller = exc_tb[-1][2]
-
-            # Build our issue title in the form
-            # "ExceptionType thrown by function name"
-            issue_title = re.sub(
-                r'"', r'\\\"', type(exc).__name__ + ' thrown by ' + caller)
-            issue_message = (
-                repr(exc.message) + '\n\n' +
-                '{noformat:title=Traceback}\n' + traceback.format_exc() + '\n{noformat}\n\n' +
-                '{noformat:title=Request}\n' + repr(request) + '\n{noformat}')
-
-            # See if this exception has already been reported inside JIRA
-            try:
-                existing = self._jira.search_issues(
-                    'project = "' + settings.JIRA_ISSUE_DEFAULTS['project']["key"] +
-                    '" AND summary ~ "' + issue_title + '"',
-                    maxResults=1)
-            except JIRAError:
-                raise
-
-            # If it has, add a comment noting that we've had another report of it
-            found = False
-            for issue in existing:
-                if issue_title == issue.fields.summary:
-
-                    # If this issue is closed, reopen it
-                    if int(issue.fields.status.id) in settings.JIRA_REOPEN_CLOSED \
-                            and (issue.fields.resolution and int(issue.fields.resolution.id) != settings.JIRA_WONT_FIX):
-                        self._jira.transition_issue(
-                            issue, str(settings.JIRA_REOPEN_ACTION))
-
-                        reopened = True
-                    else:
-                        reopened = False
-
-                    # Add a comment
-                    if reopened or not getattr(settings, 'JIRA_COMMENT_REOPEN_ONLY', False):
-                        self._jira.add_comment(issue, issue_message)
-
-                    found = True
-                    break
-
-            if not found:
-                # Otherwise, create it
-                issue = settings.JIRA_ISSUE_DEFAULTS.copy()
-                issue['summary'] = issue_title
-                issue['description'] = issue_message
-
-                self._jira.create_issue(fields=issue)
+            # From
+            # django.core.handlers.base:BaseHandler.handle_uncaught_exception
+            self.logger.error(
+                'Internal Server Error: %s', request.path,
+                exc_info=sys.exc_info(),
+                extra={
+                    'status_code': 500,
+                    'request': request})
         except:
             raise
         else:

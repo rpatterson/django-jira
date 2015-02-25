@@ -102,6 +102,12 @@ class JiraHandler(logging.Handler):
         if self.unused:
             self.fire_email(record)
 
+        try:
+            self._emit(record)
+        except Exception:
+            return self.fire_email(record, sys.exc_info())
+
+    def _emit(self, record):
         # We're first going to construct the strings
         subject = issue_title = record.getMessage()
         try:
@@ -127,39 +133,36 @@ class JiraHandler(logging.Handler):
             subject, stack_trace, request_repr)
 
         # See if this exception has already been reported inside JIRA
-        try:
-            existing = self._jira.search_issues(
-                'project = "' + self.issue_defaults['project']["key"] +
-                '" AND summary ~ "' + issue_title + '"', maxResults=1)
+        existing = self._jira.search_issues(
+            'project = "' + self.issue_defaults['project']["key"] +
+            '" AND summary ~ "' + issue_title + '"', maxResults=1)
 
-            # If it has, add a comment noting that we've had another report of it
-            found = False
-            for issue in existing:
-                if issue_title == issue.fields.summary:
+        # If it has, add a comment noting that we've had another report of it
+        found = False
+        for issue in existing:
+            if issue_title == issue.fields.summary:
 
-                    # If this issue is closed, reopen it
-                    if int(issue.fields.status.id) in self.reopen_closed \
-                            and (issue.fields.resolution and int(issue.fields.resolution.id) != self.wont_fix):
-                        self._jira.transition_issue(
-                            issue, str(self.reopen_action))
+                # If this issue is closed, reopen it
+                if int(issue.fields.status.id) in self.reopen_closed \
+                        and (issue.fields.resolution and int(issue.fields.resolution.id) != self.wont_fix):
+                    self._jira.transition_issue(
+                        issue, str(self.reopen_action))
 
-                        reopened = True
-                    else:
-                        reopened = False
+                    reopened = True
+                else:
+                    reopened = False
 
-                    # Add a comment
-                    if reopened or not self.comment_reopen_only:
-                        self._jira.add_comment(issue, issue_msg)
+                # Add a comment
+                if reopened or not self.comment_reopen_only:
+                    self._jira.add_comment(issue, issue_msg)
 
-                    found = True
-                    break
+                found = True
+                break
 
-            if not found:
-                # Otherwise, create it
-                issue = self.issue_defaults.copy()
-                issue['summary'] = issue_title
-                issue['description'] = issue_msg
+        if not found:
+            # Otherwise, create it
+            issue = self.issue_defaults.copy()
+            issue['summary'] = issue_title
+            issue['description'] = issue_msg
 
-                self._jira.create_issue(fields=issue)
-        except Exception:
-            return self.fire_email(record, sys.exc_info())
+            self._jira.create_issue(fields=issue)
