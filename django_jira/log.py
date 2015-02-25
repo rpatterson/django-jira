@@ -89,7 +89,8 @@ class JiraHandler(logging.Handler):
                         options={"server": self.jira_url})
                     return self._jr
                 elif auth_type == "oauth":
-                    raise Exception("OAuth for the Jira Reporter hasn't been implemented yet.")
+                    raise NotImplementedError(
+                        "OAuth for the Jira Reporter hasn't been implemented yet.")
                 else:
                     raise Exception("You have entered an invalid AuthType")
             else:
