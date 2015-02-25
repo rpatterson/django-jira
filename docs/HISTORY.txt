@@ -1,6 +1,20 @@
 Changelog
 =========
 
+2.2    (2015-02-25)
+-------------------
+
+- Unify logging and deprecated middleware approaches and deprecate the
+  middleware.
+  [Ross Patterson <me@rpatterson.net>]
+
+- Use Django view in issue title if possible for better identifying unique
+  bugs.
+  [Ross Patterson <me@rpatterson.net>]
+
+- Various cleanup.
+  [Ross Patterson <me@rpatterson.net>]
+
 2.1.4  (2012-09-11)
 -------------------
 
