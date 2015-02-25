@@ -106,15 +106,12 @@ class JiraHandler(logging.Handler):
             self.fire_email(record)
 
         # We're first going to construct the strings
+        subject = issue_title = record.getMessage()
         try:
             request = record.request
-            subject = record.getMessage()
-            issue_title = record.getMessage()
             filter = get_exception_reporter_filter(request)
             request_repr = filter.get_request_repr(request)
         except Exception:
-            subject = record.getMessage()
-            issue_title = record.getMessage()
             request = None
             request_repr = "Request repr() unavailable."
 
