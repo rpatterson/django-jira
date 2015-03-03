@@ -109,12 +109,11 @@ class JiraHandler(logging.Handler):
 
     def _emit(self, record):
         # We're first going to construct the strings
-        subject = issue_title = record.getMessage()
+        subject = record.getMessage()
         request = getattr(record, 'request', None)
 
         if record.exc_info:
             exc_info = record.exc_info
-            exc_type = type(exc_info[1]).__name__
 
             try:
                 # Find the view for this request
@@ -135,10 +134,12 @@ class JiraHandler(logging.Handler):
                 exc_tb = traceback.extract_tb(exc_info[2])
                 caller = exc_tb[-1][2]
 
+            exc_type = type(exc_info[1]).__name__
             issue_title = re.sub(
                 r'"', r'\\\"', exc_type + ' thrown by ' + caller)
             stack_trace = '\n'.join(traceback.format_exception(*record.exc_info))
         else:
+            issue_title = subject
             exc_info = (None, record.getMessage(), None)
             stack_trace = 'No stack trace available'
 
