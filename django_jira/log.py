@@ -120,7 +120,6 @@ class JiraHandler(logging.Handler):
 
         if record.exc_info:
             exc_info = record.exc_info
-            exc_tb = traceback.extract_tb(exc_info[2])
             exc_type = type(exc_info[1]).__name__
 
             try:
@@ -139,6 +138,7 @@ class JiraHandler(logging.Handler):
             except Exception:
                 # This parses the traceback - so we can get the name of the function
                 # which generated this exception
+                exc_tb = traceback.extract_tb(exc_info[2])
                 caller = exc_tb[-1][2]
 
             issue_title = re.sub(
