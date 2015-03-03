@@ -137,7 +137,8 @@ class JiraHandler(logging.Handler):
             exc_type = type(exc_info[1]).__name__
             issue_title = re.sub(
                 r'"', r'\\\"', exc_type + ' thrown by ' + caller)
-            stack_trace = '\n'.join(traceback.format_exception(*record.exc_info))
+            stack_trace = ''.join(
+                traceback.format_exception(*record.exc_info))
         else:
             issue_title = subject
             exc_info = (None, record.getMessage(), None)
