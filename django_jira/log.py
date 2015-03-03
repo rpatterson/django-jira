@@ -154,7 +154,7 @@ class JiraHandler(logging.Handler):
         # See if this exception has already been reported inside JIRA
         existing = self._jira.search_issues(
             'project = "' + self.issue_defaults['project']["key"] +
-            '" AND summary ~ "' + issue_title + '"', maxResults=1)
+            '" AND summary ~ "\\"' + issue_title + '\\""', maxResults=1)
 
         # If it has, add a comment noting that we've had another report of it
         found = False
