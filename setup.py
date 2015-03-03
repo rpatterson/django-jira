@@ -8,9 +8,9 @@ setup(name='django-jira',
       long_description=open(
           "README.rst").read() + "\n" + open(
               os.path.join("docs", "HISTORY.txt")).read(),
-      author='Stephen Golub',
-      author_email='nickburns2006@tamu.edu',
-      url='https://github.com/nickburns2006/django-jira',
+      author='Ross Patterson',
+      author_email='me@rpatterson.net',
+      url='https://github.com/rpatterson/django-jira',
       packages=['django_jira'],
       install_requires=['jira-python', 'django>=1.4'],
       )
