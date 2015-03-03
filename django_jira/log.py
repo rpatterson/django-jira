@@ -110,13 +110,7 @@ class JiraHandler(logging.Handler):
     def _emit(self, record):
         # We're first going to construct the strings
         subject = issue_title = record.getMessage()
-        try:
-            request = record.request
-            filter = get_exception_reporter_filter(request)
-            request_repr = filter.get_request_repr(request)
-        except Exception:
-            request = None
-            request_repr = "Request repr() unavailable."
+        request = getattr(record, 'request', None)
 
         if record.exc_info:
             exc_info = record.exc_info
@@ -148,8 +142,13 @@ class JiraHandler(logging.Handler):
             exc_info = (None, record.getMessage(), None)
             stack_trace = 'No stack trace available'
 
-        issue_msg = "%s\n\n{code:title=Traceback}\n%s\n{code}\n\n{code:title=Request}\n%s\n{code}" % (
-            subject, stack_trace, request_repr)
+        issue_msg = '%s\n\n{code:title=Traceback}\n%s\n{code}' % (
+            subject, stack_trace)
+
+        if request:
+            filter = get_exception_reporter_filter(request)
+            request_repr = filter.get_request_repr(request)
+            issue_msg += '\n\n{code:title=Request}\n%s\n{code}' % request_repr
 
         # See if this exception has already been reported inside JIRA
         existing = self._jira.search_issues(
