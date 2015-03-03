@@ -31,6 +31,11 @@ class JiraHandler(logging.Handler):
 
     """
 
+    colors = (
+        'black', 'red', 'green', 'yellow', 'blue', 'magenta', 'cyan', 'white')
+    color_codes = {str(code): color for code, color in enumerate(colors)}
+    color_pattern = re.compile('(?ms)(\\x1b\\[1;3([0-7])m(.*)\\x1b\\[0m|.*)')
+
     def __init__(
             self, include_html=False, server_url="http://localhost:2990/jira/",
             user=False, password=False, auth_type=None, issue_defaults=False,
@@ -167,6 +172,14 @@ class JiraHandler(logging.Handler):
             filter = get_exception_reporter_filter(request)
             request_repr = filter.get_request_repr(request)
             issue_msg += '\n\n{code:title=Request}\n%s\n{code}' % request_repr
+
+        # Convert ASCII color codes to the Jira text effect
+        issue_msg = ''.join(
+            match.group(2) in self.color_codes and
+            '\n{{color:{0}}}\n{1}\n{{color}}'.format(
+                self.color_codes[match.group(2)], match.group(3)
+            ) or match.group(0)
+            for match in self.color_pattern.finditer(issue_msg)).lstrip('\n')
 
         # See if this exception has already been reported inside JIRA
         existing = self._jira.search_issues(

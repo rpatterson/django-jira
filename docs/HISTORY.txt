@@ -4,6 +4,9 @@ Changelog
 2.2.1  (unreleased)
 -------------------
 
+- Convert ASCI color codes to Jira text formatting.
+  [Ross Patterson <me@rpatterson.net>]
+
 - Add support for including a full stack trace.
   [Ross Patterson <me@rpatterson.net>]
 
