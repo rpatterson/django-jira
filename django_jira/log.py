@@ -109,7 +109,8 @@ class JiraHandler(logging.Handler):
 
     def _emit(self, record):
         # We're first going to construct the strings
-        subject = record.getMessage()
+        issue_title = issue_msg = record.getMessage()
+        stack_trace = None
         request = getattr(record, 'request', None)
 
         if record.exc_info:
@@ -137,15 +138,30 @@ class JiraHandler(logging.Handler):
             exc_type = type(exc_info[1]).__name__
             issue_title = re.sub(
                 r'"', r'\\\"', exc_type + ' thrown by ' + caller)
-            stack_trace = ''.join(
-                traceback.format_exception(*record.exc_info))
-        else:
-            issue_title = subject
-            exc_info = (None, record.getMessage(), None)
-            stack_trace = 'No stack trace available'
 
-        issue_msg = '%s\n\n{code:title=Traceback}\n%s\n{code}' % (
-            subject, stack_trace)
+            if getattr(record, 'full_stack', False):
+                stack_trace = (
+                    'Traceback (most recent call last):\n{0}'.format(
+                        ''.join(
+                            traceback.format_stack(exc_info[2].tb_frame) +
+                            traceback.format_exception_only(*exc_info[:2]))))
+            else:
+                stack_trace = ''.join(
+                    traceback.format_exception(*record.exc_info))
+        elif getattr(record, 'full_stack', False):
+            caller_info = logging.getLogger(record.name).findCaller()
+            frame = logging.currentframe()
+            while frame and (
+                    frame.f_code.co_filename,
+                    frame.f_lineno,
+                    frame.f_code.co_name) != caller_info:
+                frame = frame.f_back
+            stack_trace = 'Traceback (most recent call last):\n{0}'.format(
+                ''.join(traceback.format_stack(frame)))
+
+        if stack_trace:
+            issue_msg += '\n\n{code:title=Traceback}\n%s\n{code}' % (
+                stack_trace)
 
         if request:
             filter = get_exception_reporter_filter(request)

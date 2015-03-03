@@ -99,6 +99,19 @@ specified.
     If set to True, then JIRA will only add a comment if the issue was
     reopened, otherwise, nothing occurs.
 
+Additionally, the following keys passed in the ``extra`` mapping to the logger
+method (logger.error(), logger.exception(), etc.) will affect the behavior of
+the individual message.
+
+``full_stack``:
+    If the message ``exc_info`` argument is given and ``full_stack``
+    evaluates as ``True``, then include the whole stack trace, not just the
+    Traceback's stack trace up to the point of the exception handler. If the
+    message ``exc_info`` argument is *not* given and ``full_stack``
+    evaluates as ``True``, then include the whole stack trace, from the caller
+    of the logger method.  This may be useful to capture more context for your
+    exception handling code.
+
 Filter Descriptions
 -------------------
 

@@ -1,6 +1,12 @@
 Changelog
 =========
 
+2.2.1  (unreleased)
+-------------------
+
+- Add support for including a full stack trace.
+  [Ross Patterson <me@rpatterson.net>]
+
 2.2    (2015-02-25)
 -------------------
 
