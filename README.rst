@@ -99,18 +99,24 @@ specified.
     If set to True, then JIRA will only add a comment if the issue was
     reopened, otherwise, nothing occurs.
 
+``no_view_full_stack``:
+    If the message ``exc_info`` argument is given, ``no_view_full_stack``
+    evaluates as ``True``, and no Django view can be resolved, then include
+    the whole stack trace, not just the Traceback's stack trace up to the
+    point of the exception handler. If the message ``exc_info`` argument is
+    *not* given, ``no_view_full_stack`` evaluates as ``True``, and no Django
+    view can be resolved, then include the whole stack trace, from the caller
+    of the logger method.  This may be useful to capture more context for your
+    exception handling code.
+
 Additionally, the following keys passed in the ``extra`` mapping to the logger
 method (logger.error(), logger.exception(), etc.) will affect the behavior of
 the individual message.
 
 ``full_stack``:
-    If the message ``exc_info`` argument is given and ``full_stack``
-    evaluates as ``True``, then include the whole stack trace, not just the
-    Traceback's stack trace up to the point of the exception handler. If the
-    message ``exc_info`` argument is *not* given and ``full_stack``
-    evaluates as ``True``, then include the whole stack trace, from the caller
-    of the logger method.  This may be useful to capture more context for your
-    exception handling code.
+    If ``full_stack`` evaluates as ``True``, then the stack trace behavior of
+    ``no_view_full_stack`` above described above will take effect regardless,
+    even if a Django view could be resolved.
 
 Filter Descriptions
 -------------------

@@ -40,7 +40,8 @@ class JiraHandler(logging.Handler):
             self, include_html=False, server_url="http://localhost:2990/jira/",
             user=False, password=False, auth_type=None, issue_defaults=False,
             reopen_closed=(4, 6), reopen_action=3, wont_fix=False,
-            comment_reopen_only=False, mail_logger="mail_admins"):
+            comment_reopen_only=False, mail_logger="mail_admins",
+            no_view_full_stack=False):
         logging.Handler.__init__(self)
         self.include_html = include_html
         if not server_url or not user or not password:
@@ -74,6 +75,8 @@ class JiraHandler(logging.Handler):
             self.wont_fix = wont_fix
             self.comment_reopen_only = comment_reopen_only
             self.mail_logger = mail_logger
+
+            self.no_view_full_stack = no_view_full_stack
 
     @property
     def _jira(self):
@@ -117,24 +120,30 @@ class JiraHandler(logging.Handler):
         issue_title = issue_msg = record.getMessage()
         stack_trace = None
         request = getattr(record, 'request', None)
+        full_stack = getattr(record, 'full_stack', False)
+
+        try:
+            # Find the view for this request
+            # From django.core.handlers.base:BaseHandler.get_response
+            from django.core import urlresolvers
+            from django.conf import settings
+
+            urlconf = settings.ROOT_URLCONF
+            urlresolvers.set_urlconf(urlconf)
+            resolver = urlresolvers.RegexURLResolver(r'^/', urlconf)
+            callback, callback_args, callback_kwargs = resolver.resolve(
+                request.path_info)
+            caller = '{0}:{1}'.format(
+                callback.__module__, callback.__name__)
+        except Exception:
+            caller = None
+            if self.no_view_full_stack:
+                full_stack = True
 
         if record.exc_info:
             exc_info = record.exc_info
 
-            try:
-                # Find the view for this request
-                # From django.core.handlers.base:BaseHandler.get_response
-                from django.core import urlresolvers
-                from django.conf import settings
-
-                urlconf = settings.ROOT_URLCONF
-                urlresolvers.set_urlconf(urlconf)
-                resolver = urlresolvers.RegexURLResolver(r'^/', urlconf)
-                callback, callback_args, callback_kwargs = resolver.resolve(
-                    request.path_info)
-                caller = '{0}:{1}'.format(callback.__module__, callback.__name__)
-
-            except Exception:
+            if caller is None:
                 # This parses the traceback - so we can get the name of the function
                 # which generated this exception
                 exc_tb = traceback.extract_tb(exc_info[2])
@@ -144,7 +153,7 @@ class JiraHandler(logging.Handler):
             issue_title = re.sub(
                 r'"', r'\\\"', exc_type + ' thrown by ' + caller)
 
-            if getattr(record, 'full_stack', False):
+            if full_stack:
                 stack_trace = (
                     'Traceback (most recent call last):\n{0}'.format(
                         ''.join(
@@ -153,7 +162,7 @@ class JiraHandler(logging.Handler):
             else:
                 stack_trace = ''.join(
                     traceback.format_exception(*record.exc_info))
-        elif getattr(record, 'full_stack', False):
+        elif full_stack:
             caller_info = logging.getLogger(record.name).findCaller()
             frame = logging.currentframe()
             while frame and (
