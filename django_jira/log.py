@@ -13,7 +13,7 @@ from jira.client import JIRA
 class JiraRecord(object):
 
     def __init__(self, record, exc_info):
-        self.request = record.request
+        self.request = getattr(record, 'request', None)
         self.exc_info = exc_info
         self.levelname = "ERROR"
 
