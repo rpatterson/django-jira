@@ -4,6 +4,9 @@ Changelog
 2.2.1  (unreleased)
 -------------------
 
+- Add support for setting watchers.
+  [Ross Patterson <me@rpatterson.net>]
+
 - Convert ASCI color codes to Jira text formatting.
   [Ross Patterson <me@rpatterson.net>]
 

@@ -38,7 +38,8 @@ class JiraHandler(logging.Handler):
 
     def __init__(
             self, include_html=False, server_url="http://localhost:2990/jira/",
-            user=False, password=False, auth_type=None, issue_defaults=False,
+            user=False, password=False, auth_type=None,
+            issue_defaults=False, watchers=(),
             reopen_closed=(4, 6), reopen_action=3, wont_fix=False,
             comment_reopen_only=False, mail_logger="mail_admins",
             no_view_full_stack=False):
@@ -57,6 +58,7 @@ class JiraHandler(logging.Handler):
                 self.issue_defaults = issue_defaults.copy()
             else:
                 self.issue_defaults = {}
+            self.watchers = watchers
 
             if 'project' not in self.issue_defaults:
                 self.issue_defaults['project'] = {'key': 'JIRA'}
@@ -223,4 +225,6 @@ class JiraHandler(logging.Handler):
             issue['summary'] = issue_title
             issue['description'] = issue_msg
 
-            self._jira.create_issue(fields=issue)
+            issue = self._jira.create_issue(fields=issue)
+            for watcher in self.watchers:
+                self._jira.add_watcher(issue.key, watcher)

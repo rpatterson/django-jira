@@ -81,6 +81,9 @@ specified.
 
     The above are required.
 
+``watchers``:
+    A sequence of watchers to add to the issue if creating a new issue.
+
 ``reopen_closed``:
     If an exception is raised and an issue is closed is in any of the states
     indicated by this setting, it will be reopened. Set to an empty tuple to
