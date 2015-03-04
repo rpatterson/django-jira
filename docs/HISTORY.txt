@@ -1,6 +1,12 @@
 Changelog
 =========
 
+2.2.2  (2015-03-04)
+-------------------
+
+- Workaround a multiprocessing stack trace problem.
+  [Ross Patterson <me@rpatterson.net>]
+
 2.2.1  (2015-03-04)
 -------------------
 

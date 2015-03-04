@@ -3,7 +3,7 @@ import os
 from distutils.core import setup
 
 setup(name='django-jira',
-      version='2.2.1',
+      version='2.2.2',
       description='An automated exception reporter to JIRA from Django',
       long_description=open(
           "README.rst").read() + "\n" + open(

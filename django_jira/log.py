@@ -156,12 +156,15 @@ class JiraHandler(logging.Handler):
                 r'"', r'\\\"', exc_type + ' thrown by ' + caller)
 
             if full_stack:
-                stack_trace = (
-                    'Traceback (most recent call last):\n{0}'.format(
-                        ''.join(
-                            traceback.format_stack(exc_info[2].tb_frame) +
-                            traceback.format_exception_only(*exc_info[:2]))))
-            else:
+                try:
+                    stack_trace = (
+                        'Traceback (most recent call last):\n{0}'.format(
+                            ''.join(
+                                traceback.format_stack(exc_info[2].tb_frame) +
+                                traceback.format_exception_only(*exc_info[:2]))))
+                except Exception:
+                    pass
+            if stack_trace is None:
                 stack_trace = ''.join(
                     traceback.format_exception(*record.exc_info))
         elif full_stack:
