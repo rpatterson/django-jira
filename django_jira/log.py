@@ -152,8 +152,7 @@ class JiraHandler(logging.Handler):
                 caller = exc_tb[-1][2]
 
             exc_type = type(exc_info[1]).__name__
-            issue_title = re.sub(
-                r'"', r'\\\"', exc_type + ' thrown by ' + caller)
+            issue_title = exc_type + ' thrown by ' + caller
 
             if full_stack:
                 try:
@@ -187,6 +186,12 @@ class JiraHandler(logging.Handler):
             request_repr = filter.get_request_repr(request)
             issue_msg += '\n\n{code:title=Request}\n%s\n{code}' % request_repr
 
+        # Escape quotes
+        issue_title = issue_title.replace(r'"', r'\\\"')
+        # Strip ASCII color codes from the summary
+        issue_title = ''.join(
+            match.group(3) or match.group(0) for match in
+            self.color_pattern.finditer(issue_title))
         # Convert ASCII color codes to the Jira text effect
         issue_msg = ''.join(
             match.group(2) in self.color_codes and
