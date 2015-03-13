@@ -34,7 +34,7 @@ class JiraHandler(logging.Handler):
     colors = (
         'black', 'red', 'green', 'yellow', 'blue', 'magenta', 'cyan', 'white')
     color_codes = {str(code): color for code, color in enumerate(colors)}
-    color_pattern = re.compile('(?ms)(\\x1b\\[1;3([0-7])m(.*)\\x1b\\[0m|.*)')
+    color_pattern = re.compile('(?ms)\x1b\\[1;3([0-7])m(.*)\x1b\\[0m')
 
     def __init__(
             self, include_html=False, server_url="http://localhost:2990/jira/",
@@ -119,7 +119,18 @@ class JiraHandler(logging.Handler):
 
     def _emit(self, record):
         # We're first going to construct the strings
-        issue_title = issue_msg = record.getMessage()
+        issue_msg = record.getMessage()
+
+        # Strip ASCII color codes from the summary
+        issue_title = self.color_pattern.sub(r'\2', issue_msg)
+        # Join multi line summary
+        issue_title = issue_title.replace('\n', ' - ')
+        # Convert ASCII color codes to the Jira text effect
+        issue_msg = self.color_pattern.sub(
+            lambda match, self=self: '\n{{color:{0}}}\n{1}\n{{color}}'.format(
+                self.color_codes[match.group(1)], match.group(2)),
+            issue_msg).strip()
+
         stack_trace = None
         request = getattr(record, 'request', None)
         full_stack = getattr(record, 'full_stack', False)
@@ -188,17 +199,6 @@ class JiraHandler(logging.Handler):
 
         # Escape quotes
         issue_title = issue_title.replace(r'"', r'\\\"')
-        # Strip ASCII color codes from the summary
-        issue_title = ''.join(
-            match.group(3) or match.group(0) for match in
-            self.color_pattern.finditer(issue_title))
-        # Convert ASCII color codes to the Jira text effect
-        issue_msg = ''.join(
-            match.group(2) in self.color_codes and
-            '\n{{color:{0}}}\n{1}\n{{color}}'.format(
-                self.color_codes[match.group(2)], match.group(3)
-            ) or match.group(0)
-            for match in self.color_pattern.finditer(issue_msg)).lstrip('\n')
 
         # See if this exception has already been reported inside JIRA
         existing = self._jira.search_issues(
