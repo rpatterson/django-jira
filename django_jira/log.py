@@ -3,11 +3,28 @@ import re
 import sys
 import traceback
 
-
+from django.core.handlers import base
 from django.utils.log import AdminEmailHandler
 from django.views.debug import get_exception_reporter_filter
 
 from jira.client import JIRA
+
+
+def get_view_frame(frame=None):
+    """
+    Walk up the frame stack to find the frame of the django view being called.
+    """
+    if frame is None:
+        frame = sys._getframe(2)
+
+    prev_frame = None
+    while frame is not None:
+        if frame.f_code is base.BaseHandler.get_response.func_code:
+            break
+        prev_frame = frame
+        frame = frame.f_back
+
+    return prev_frame
 
 
 class JiraRecord(object):
@@ -132,8 +149,13 @@ class JiraHandler(logging.Handler):
             issue_msg).strip()
 
         stack_trace = None
-        request = getattr(record, 'request', None)
         full_stack = getattr(record, 'full_stack', False)
+
+        request = getattr(record, 'request', None)
+        if request is None:
+            view_frame = get_view_frame()
+            if view_frame is not None:
+                request = view_frame.f_locals.get('request')
 
         try:
             # Find the view for this request
@@ -177,16 +199,20 @@ class JiraHandler(logging.Handler):
             if stack_trace is None:
                 stack_trace = ''.join(
                     traceback.format_exception(*record.exc_info))
-        elif full_stack:
-            caller_info = logging.getLogger(record.name).findCaller()
-            frame = logging.currentframe()
-            while frame and (
-                    frame.f_code.co_filename,
-                    frame.f_lineno,
-                    frame.f_code.co_name) != caller_info:
-                frame = frame.f_back
-            stack_trace = 'Traceback (most recent call last):\n{0}'.format(
-                ''.join(traceback.format_stack(frame)))
+        else:
+            if caller:
+                issue_title = '{issue_title!r} logged by {caller}'.format(
+                    **locals())
+            if full_stack:
+                caller_info = logging.getLogger(record.name).findCaller()
+                frame = logging.currentframe()
+                while frame and (
+                        frame.f_code.co_filename,
+                        frame.f_lineno,
+                        frame.f_code.co_name) != caller_info:
+                    frame = frame.f_back
+                stack_trace = 'Traceback (most recent call last):\n{0}'.format(
+                    ''.join(traceback.format_stack(frame)))
 
         if stack_trace:
             issue_msg += '\n\n{code:title=Traceback}\n%s\n{code}' % (
